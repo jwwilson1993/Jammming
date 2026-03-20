@@ -10,12 +10,13 @@ function App() {
   const [playlistName, setPlaylistName] = useState('My Playlist');
   const [playlistTracks, setPlaylistTracks] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     const loadToken = async () => {
       try {
         const token = await Spotify.getAccessToken();
-        console.log('Token:', token);
+       // console.log('Token:', token);
 
         if (token) {
           setIsLoggedIn(true);
@@ -37,13 +38,21 @@ function App() {
   };
 
   const handleSearch = async () => {
-    try {
-      const results = await Spotify.search(searchTerm);
-      setSearchResults(results);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  if (!searchTerm.trim()) {
+    return;
+  }
+
+  try {
+    setErrorMessage('');
+    const results = await Spotify.search(searchTerm);
+    setSearchResults(results);
+  } catch (error) {
+    console.error(error);
+    setErrorMessage(
+  'Spotify API access is restricted. Make sure the app owner has Premium and your account is allowlisted.'
+);
+  }
+};
 
   const addTrack = (track) => {
     if (playlistTracks.find((saved) => saved.id === track.id)) {
@@ -59,10 +68,24 @@ function App() {
     );
   };
 
+  const savePlaylist = async () => {
+  const uris = playlistTracks.map((track) => track.uri);
+
+  try {
+    setErrorMessage('');
+    await Spotify.savePlaylist(playlistName, uris);
+    setPlaylistName('New Playlist');
+    setPlaylistTracks([]);
+  } catch (error) {
+    console.error(error);
+    setErrorMessage(error.message);
+  }
+};
+
   return (
     <div>
       <h1>Jammming</h1>
-
+      {errorMessage && <p>{errorMessage}</p>}
       {isLoggedIn && <p>Connected to Spotify ✅</p>}
 
       <SearchBar
@@ -79,6 +102,7 @@ function App() {
         onRemove={removeTrack}
         name={playlistName}
         setName={setPlaylistName}
+        onSave={savePlaylist}
       />
     </div>
   );
